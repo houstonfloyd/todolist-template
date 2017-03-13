@@ -1,0 +1,14 @@
+<form action="/lists" method="post"> <!-- action will send to specified URL, post will send data-->
+	<dl>
+		<dt>
+			<label for="list_name">Enter the name for your new list:</label>
+		</dt>
+		<dd>
+			<input name="list_name" placeholder="List Name" type="text" value="">
+		</dd><!-- input name value is what we can use to retrieve data sent, with Sinatra params hash-->
+	</dl>
+	<fieldset class="actions">
+		<input type="submit" value="Save">
+		<a href="/">Cancel</a>
+	</fieldset>
+</form>
