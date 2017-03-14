@@ -1,0 +1,27 @@
+<section id="todos">
+	<header>
+		<h2>Editing <%= @list[:name] %></h2>
+		<ul>
+			<li>
+			<!-- We always have to assume that a browser could make a fetch request too quickly, so we only use GET requests for things we don't mind showing immediately. We therefore need to have the delete link instead be a POST request, and to do that, we have to place it in a form with a button. The CSS formats the button to look a link. -->
+			<form action="/lists/<%= params[:id] %>/delete" method="post">
+			<button type="submit" class="delete">Delete List</button>
+			</form>
+		</ul>
+	</header>
+</section>
+
+<form action="/lists/<%= params[:id] %>" method="post"> <!-- action will send to specified URL, post will send data-->
+	<dl>
+		<dt>
+			<label for="list_name">Enter the new name for the list:</label>
+		</dt>
+		<dd>
+			<input name="list_name" placeholder="List Name" type="text" value="<%= params[:list_name] || @list[:name] %>">
+		</dd><!-- input name value is what we can use to retrieve data sent, with Sinatra params hash-->
+	</dl>
+	<fieldset class="actions">
+		<input type="submit" value="Save">
+		<a href="/lists/<%= params[:id] %>">Cancel</a>
+	</fieldset>
+</form>
