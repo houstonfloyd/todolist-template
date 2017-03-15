@@ -3,7 +3,7 @@
 # If we go into browser tools and delete the cookie, we lose the lists
 
 require "sinatra"
-require "sinatra/reloader"
+require "sinatra/reloader" if development?
 require "tilt/erubis"
 require "sinatra/content_for"
 
@@ -15,6 +15,46 @@ configure do
 																# changes, any session previous will become invalid
 end
 
+#accessible in any view template, or routes in this file
+#if there are methods you want to share that aren't needed in views,
+#don't need to go in helpers (and shouldn't, to better delineate the code)
+helpers do
+	def list_complete?(list)
+		todos_count(list) > 0 && todos_remaining_count(list) == 0
+	end
+
+#we don't need to worry about returning nil
+	def list_class(list)
+		"complete" if list_complete?(list)
+	end
+
+	def todos_count(list)
+		list[:todos].size
+	end
+
+	def todos_remaining_count(list)
+		list[:todos].select { |todo| !todo[:completed] }.size
+	end
+
+		#we can use hashes because they are now ordered in Ruby
+	def sort_lists(lists, &block)
+		complete_lists, incomplete_lists = lists.partition { |list| list_complete?(list) }
+
+		incomplete_lists.each { |list| yield list, lists.index(list) }
+		complete_lists.each { |list| yield list, lists.index(list) }
+	end
+
+	#You can compare this with sort_lists method to see different approaches. Ultimately,
+	# unless what you are doing is very performant sensitive, choose the one that reads easier -
+	# in this case, sort_lists
+	def sort_todos(todos, &block)
+		complete_todos, incomplete_todos = todos.partition { |todo| todo[:completed] }
+
+		incomplete_todos.each { |todo| yield todo, todos.index(todo) }
+		complete_todos.each { |todo| yield todo, todos.index(todo) }
+	end
+end
+
 before do
 	session[:lists] ||= []
 end
@@ -23,14 +63,14 @@ get "/" do
 	redirect "/lists"
 end
 
-# URL design: Note that the URLS have names that are resource based - i.e. 
-# they all refer to what they are affecting/viewing
-# GET /lists
-# GET /lists/new
-# POST /lists
-# GET /lists/1 -> view a single list
-# GET /users
-# GET /users/1	-> if this app had user info, we would build out URLs like this
+#URL design: Note that the URLS have names that are resource based - i.e. 
+#they all refer to what they are affecting/viewing
+#GET /lists
+#GET /lists/new
+#POST /lists
+#GET /lists/1 -> view a single list
+#GET /users
+#GET /users/1	-> if this app had user info, we would build out URLs like this
 
 
 # View list of lists
@@ -58,6 +98,8 @@ def error_for_todo(name)
 		"List name must be between 1 and 100 characters."
 	end
 end
+
+
 
 # Create a new list
 ## Note how we redirect when a valid action takes place, but instead render
@@ -137,7 +179,39 @@ post "/lists/:list_id/todos" do
 	end
 end
 
+#Delete a todo from a list
 post "/lists/:list_id/todos/:id/delete" do
-	@todo_id = params[:todo_id].to_i
+	@list_id = params[:list_id].to_i
 	@list = session[:lists][@list_id]
+
+	todo_id = params[:id].to_i
+	@list[:todos].delete_at todo_id
+	session[:success] = "The todo has been deleted."
+	redirect "/lists/#{@list_id}"
+end
+
+#update status of a todo
+post "/lists/:list_id/todos/:id" do
+	@list_id = params[:list_id].to_i
+	@list = session[:lists][@list_id]
+
+	todo_id = params[:id].to_i
+	is_completed = params[:completed] == "true"
+	@list[:todos][todo_id][:completed] = is_completed
+
+	session[:success] = "The todo has been updated."
+	redirect "/lists/#{@list_id}"
+end
+
+# Mark all todos as complete for a list
+post "/lists/:id/complete_all" do
+	@list_id = params[:id].to_i
+	@list = session[:lists][@list_id]
+
+	@list[:todos].each do |todo|
+		todo[:completed] = true
+	end
+
+	session[:success] = "All todos have been completed."
+	redirect "/lists/#{@list_id}"
 end
